@@ -1,7 +1,9 @@
 from pydantic import BaseModel
+from datetime import datetime
 
 
-class CertificateFields(BaseModel):
+class CertificateData(BaseModel):
+    certificate_id: str
     country_name: str
     state_or_province_name: str
     locality_name: str
@@ -9,5 +11,6 @@ class CertificateFields(BaseModel):
     organizational_unit_name: str
     common_name: str
     email_address: str
-    dns_names: list[str]
+    domain_names: list[str]
     ip_addresses: list[str]
+    expiration_date: datetime
