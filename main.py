@@ -1,10 +1,12 @@
+import os
+
 from litestar import Litestar, get
 import uvicorn
 
+from db.db import MongoConnector
 from settings import Settings
 import asyncio
 from routers.certificates_operations.certificate_operations_router import router as certificate_operations_router
-from tools.rabbitmq.rabbitmq_manager import RabbitMQManager
 
 settings = Settings()
 
@@ -16,14 +18,12 @@ async def hello_world() -> str:
 
 async def startup() -> None:
     asyncio.get_event_loop().set_debug(settings.is_dev)
-    RabbitMQManager().init(host=settings.rabbitmq_host)
-    await RabbitMQManager().connect()
 
+    MongoConnector().init(mongodb_uri=os.getenv("MONGODB_URI"), db_name=os.getenv("DB_NAME"))
 
 
 async def shutdown() -> None:
-    await RabbitMQManager().close()
-    pass
+    MongoConnector().close_connection()
 
 
 app = Litestar(route_handlers=[hello_world, certificate_operations_router], on_startup=[startup],

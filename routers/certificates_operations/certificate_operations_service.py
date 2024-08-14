@@ -3,9 +3,8 @@ import os
 
 import aiofiles
 
+from db.db import MongoConnector
 from models.certificate_data import CertificateData
-from tools.rabbitmq.rabbitmq_manager import RabbitMQManager
-from tools.rabbitmq.rabbitmq_utils import RabbitMQUtils
 from tools.utils.certificate_operations_utils import CertificateOperationsUtils
 from litestar.background_tasks import BackgroundTask
 from tools.file_names import FileNames
