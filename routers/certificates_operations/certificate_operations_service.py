@@ -24,7 +24,6 @@ async def remove_files(certificate_filenames: FileNames) -> None:
 class CertificateOperationsService:
     def __init__(self) -> None:
         self.certificate_operation_utils = CertificateOperationsUtils()
-        self.rabbitmq_manager = RabbitMQManager()
 
     async def create_certificate(self, data: CertificateData) -> BackgroundTask:
         return BackgroundTask(self.create_certificate_in_background, data)

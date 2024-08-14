@@ -14,4 +14,3 @@ class Settings(BaseSettings):
     allow_methods: List[str] = ["*"]
     allow_credentials: bool = True
     allow_headers: List[str] = ["*"]
-    rabbitmq_host: str = os.getenv("RABBITMQ_HOST")

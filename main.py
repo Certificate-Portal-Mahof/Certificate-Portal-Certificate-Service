@@ -20,8 +20,10 @@ async def startup() -> None:
     await RabbitMQManager().connect()
 
 
+
 async def shutdown() -> None:
     await RabbitMQManager().close()
+    pass
 
 
 app = Litestar(route_handlers=[hello_world, certificate_operations_router], on_startup=[startup],
