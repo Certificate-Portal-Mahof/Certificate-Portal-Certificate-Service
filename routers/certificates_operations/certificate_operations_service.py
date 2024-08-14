@@ -28,8 +28,8 @@ class CertificateOperationsService:
         return BackgroundTask(self.create_certificate_in_background, data)
 
     async def create_certificate_in_background(self, data: CertificateData) -> None:
+        certificate_id = data.certificate_id
         certificate_filenames: (FileNames | None) = await self.certificate_operation_utils.create_certificate(data)
-
         if certificate_filenames is None:
             return
 
@@ -39,4 +39,4 @@ class CertificateOperationsService:
 
         await remove_files(certificate_filenames)
 
-        await RabbitMQUtils().send_message(queue_message=queue_message)
+        await MongoConnector().fs.upload_from_stream(filename=certificate_id, source=queue_message)
