@@ -9,7 +9,7 @@ class Settings(BaseSettings):
     app: str = "main:app"
     host: str = "127.0.0.1" if is_dev else "0.0.0.0"
     port: int = 9200
-    reload: bool = True
+    reload: bool = False
     allow_origins: List[str] = ["http://localhost:5173"] if is_dev else ["*"]
     allow_methods: List[str] = ["*"]
     allow_credentials: bool = True

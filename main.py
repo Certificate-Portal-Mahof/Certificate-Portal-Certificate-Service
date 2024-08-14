@@ -37,4 +37,4 @@ def startup() -> None:
 app = Litestar(route_handlers=[hello_world, certificate_operations_router], on_startup=[startup])
 
 if __name__ == "__main__":
-    uvicorn.run(app=settings.app, host=settings.host, port=settings.port, reload=settings.reload)
+    uvicorn.run(app=settings.app, host=settings.host, port=settings.port, reload=settings.reload, loop="asyncio")
