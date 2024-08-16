@@ -1,151 +1,108 @@
-import asyncio
-import subprocess
-import textwrap
-from datetime import datetime
+from datetime import datetime, timedelta
+from ipaddress import IPv4Address
+from typing import Any
 
-import aiofiles
-from functools import partial
+
+from cryptography import x509
+from cryptography.hazmat._oid import NameOID
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives import serialization, hashes
+from cryptography.hazmat.primitives.asymmetric import rsa
+from cryptography.hazmat.primitives.asymmetric.rsa import RSAPrivateKey
+from cryptography.x509 import Certificate
+
 from models.certificate_data import CertificateData
-from tools.file_names import FileNames
 from config import ROOT_CA_CERTIFICATE_PATH, ROOT_CA_KEY_PATH, ROOT_CA_PASSCODE
+from tools.singleton import Singleton
 
 
-def run_process(cmd):
-    subprocess.run(cmd, text=True, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+class CertificateOperationsUtils(metaclass=Singleton):
+    cryptography_default_backend: Any = None
+    ca_cert: Certificate = None
+    ca_key: RSAPrivateKey = None
 
+    def init(self) -> None:
+        self.cryptography_default_backend = default_backend()
+        self.ca_cert, self.ca_key = self.load_ca_certificate_and_key()
 
-class CertificateOperationsUtils:
-    async def create_extension_file(self, certificate_data: CertificateData, certificate_filenames: FileNames):
-        any_alt_names = True
-        if len(certificate_data.domain_names) + len(certificate_data.ip_addresses) == 0:
-            any_alt_names = False
+    def load_ca_certificate_and_key(self) -> [Certificate, RSAPrivateKey]:
+        root_ca_passcode_bytes = ROOT_CA_PASSCODE.encode()
 
-        # Generate the configuration file content
-        config_content = textwrap.dedent("""authorityKeyIdentifier=keyid,issuer
-                                            basicConstraints=CA:FALSE
-                                            keyUsage = digitalSignature, nonRepudiation, keyEncipherment, dataEncipherment
-                                            """)
+        with open(ROOT_CA_CERTIFICATE_PATH, "rb") as cert_file:
+            ca_cert_data = cert_file.read()
+            ca_cert = x509.load_pem_x509_certificate(data=ca_cert_data,backend=self.cryptography_default_backend)
 
-        if any_alt_names:
-            config_content += textwrap.dedent("""subjectAltName = @alt_names
-                                                 
-                                                 [alt_names]\n""")
-            # Add DNS names to the configuration
-            for i, dns in enumerate(certificate_data.domain_names, start=1):
-                config_content += f"DNS.{i} = {dns}\n"
+        with open(ROOT_CA_KEY_PATH, "rb") as key_file:
+            ca_key_data = key_file.read()
+            ca_key = serialization.load_pem_private_key(ca_key_data, root_ca_passcode_bytes,
+                                                        self.cryptography_default_backend)
 
-            # Add IP addresses to the configuration
-            for i, ip in enumerate(certificate_data.ip_addresses, start=1):
-                config_content += f"IP.{i} = {ip}\n"
+        return ca_cert, ca_key
 
-        try:
-            # Write the configuration content to a file
-            async with aiofiles.open(certificate_filenames.get_ext_filepath(), "w") as extension_file:
-                await extension_file.write(config_content)
-            print(f"Extension file generated: {certificate_filenames.get_ext_filepath()}")
-        except IOError as e:
-            print(f"IOError while writing the extension file: {e}")
-            raise e
-        except Exception as e:
-            print(f"An unexpected error occurred while writing the extension file: {e}")
-            raise e
-
-    async def create_csr_and_key_files(self, certificate_data: CertificateData, certificate_filenames: FileNames):
-        openssl_command = [
-            "openssl", "req", "-new", "-nodes",
-            "-out", certificate_filenames.get_csr_filepath(),
-            "-newkey", "rsa:4096",
-            "-keyout", certificate_filenames.get_key_filepath(),
-            "-subj", f"/C={certificate_data.country_name}"
-                     f"/ST={certificate_data.state_or_province_name}"
-                     f"/L={certificate_data.locality_name}"
-                     f"/O={certificate_data.organization_name}"
-                     f"/OU={certificate_data.organizational_unit_name}"
-                     f"/CN={certificate_data.common_name}"
-                     f"/emailAddress={certificate_data.email_address}"
-        ]
-
-        try:
-            partial_process = partial(run_process, openssl_command)
-            await asyncio.get_event_loop().run_in_executor(None, partial_process)
-            print(
-                f"CSR and key generated: {certificate_filenames.get_csr_filepath()}, "
-                f"{certificate_filenames.get_key_filepath()}")
-        except subprocess.CalledProcessError as e:
-            print(f"Error generating CSR and key: {e}")
-            print(e.stderr)
-            raise e
-        except Exception as e:
-            print(f"An unexpected error occurred while generating CSR and key: {e}")
-            raise e
-
-    async def create_crt_file(self, certificate_data: CertificateData, certificate_filenames: FileNames):
-        certificate_expiration_date: datetime = certificate_data.expiration_date.replace(tzinfo=None)
+    def get_expiration_days(self, expiration_date: datetime) -> int:
+        certificate_expiration_date: datetime = expiration_date.replace(tzinfo=None)
         current_date = datetime.now()
         expiration_days = (certificate_expiration_date - current_date).days
+        return expiration_days
 
-        if expiration_days <= 0:
-            raise ValueError("The expiration date must be in the future.")
-
-        openssl_command = [
-            "openssl", "x509", "-req",
-            "-in", certificate_filenames.get_csr_filepath(),
-            "-CA", ROOT_CA_CERTIFICATE_PATH,
-            "-CAkey", ROOT_CA_KEY_PATH,
-            "-CAcreateserial",
-            "-out", certificate_filenames.get_crt_filepath(),
-            "-days", str(expiration_days),
-            "-sha256",
-            "-extfile", certificate_filenames.get_ext_filepath(),
-            "-passin", f"pass:{ROOT_CA_PASSCODE}"
-        ]
-
+    async def generate_certificate(self, certificate_data: CertificateData) -> [bytes, bytes]:
         try:
-            partial_process = partial(run_process, openssl_command)
-            await asyncio.get_event_loop().run_in_executor(None, partial_process)
-            print(f"Certificate generated: {certificate_filenames.get_crt_filepath()}")
-        except subprocess.CalledProcessError as e:
-            print(f"Error generating CSR and key: {e}")
-            print(e.stderr)
-            raise e
+            private_key = rsa.generate_private_key(
+                public_exponent=65537,
+                key_size=2048,
+                backend=default_backend()
+            )
+
+            subject = x509.Name([
+                x509.NameAttribute(NameOID.COUNTRY_NAME, certificate_data.country_name),
+                x509.NameAttribute(NameOID.STATE_OR_PROVINCE_NAME, certificate_data.state_or_province_name),
+                x509.NameAttribute(NameOID.LOCALITY_NAME, certificate_data.locality_name),
+                x509.NameAttribute(NameOID.ORGANIZATION_NAME, certificate_data.organization_name),
+                x509.NameAttribute(NameOID.ORGANIZATIONAL_UNIT_NAME, certificate_data.organizational_unit_name),
+                x509.NameAttribute(NameOID.EMAIL_ADDRESS, certificate_data.email_address),
+                x509.NameAttribute(NameOID.COMMON_NAME, certificate_data.common_name),
+            ])
+
+            expiration_days = self.get_expiration_days(certificate_data.expiration_date)
+
+            certificate_builder = x509.CertificateBuilder().subject_name(
+                subject
+            ).issuer_name(
+                self.ca_cert.subject
+            ).public_key(
+                private_key.public_key()
+            ).serial_number(
+                x509.random_serial_number()
+            ).not_valid_before(
+                datetime.utcnow()
+            ).not_valid_after(
+                datetime.utcnow() + timedelta(days=expiration_days)
+            ).add_extension(
+                x509.SubjectAlternativeName([x509.DNSName(dns) for dns in certificate_data.domain_names] +
+                                            [x509.IPAddress(IPv4Address(ip)) for ip in certificate_data.ip_addresses]),
+                critical=False,
+            )
+
+            certificate = certificate_builder.sign(self.ca_key, hashes.SHA256(), default_backend())
+
+            private_key_pem = private_key.private_bytes(
+                encoding=serialization.Encoding.PEM,
+                format=serialization.PrivateFormat.TraditionalOpenSSL,
+                encryption_algorithm=serialization.NoEncryption()
+            )
+
+            certificate_pem = certificate.public_bytes(serialization.Encoding.PEM)
+
+            return private_key_pem, certificate_pem
         except Exception as e:
-            print(f"An unexpected error occurred while generating certificate: {e}")
-            raise e
+            print(f"Unknown exception while creating a certificate: {e}")
+            print(type(e))
 
-    async def create_pem_file(self, certificate_filenames: FileNames):
+    async def create_certificate_new(self, certificate_data: CertificateData) -> bytes | None:
         try:
-            async with aiofiles.open(certificate_filenames.get_key_filepath(), "r") as key_file:
-                key_data = await key_file.read()
-
-            async with aiofiles.open(certificate_filenames.get_crt_filepath(), "r") as crt_file:
-                crt_data = await crt_file.read()
-
-            async with aiofiles.open(certificate_filenames.get_pem_filepath(), "w") as pem_file:
-                await pem_file.write(key_data)
-                await pem_file.write('\n')
-                await pem_file.write(crt_data)
-
-            print(f"PEM file generated: {certificate_filenames.get_pem_filepath()}")
-        except IOError as e:
-            print(f"IOError while writing the extension file: {e}")
-            raise e
-        except Exception as e:
-            print(f"An unexpected error occurred while writing the extension file: {e}")
-            raise e
-
-    async def create_certificate(self, certificate_data: CertificateData) -> FileNames | None:
-        certificate_filenames = FileNames()
-
-        try:
-            await self.create_csr_and_key_files(certificate_data, certificate_filenames)
-            await self.create_extension_file(certificate_data, certificate_filenames)
-            await self.create_crt_file(certificate_data, certificate_filenames)
-            await self.create_pem_file(certificate_filenames)
-
-            return certificate_filenames
-        except subprocess.CalledProcessError as e:
-            print(f"Error during certificate creation process: {e}")
-            return None
+            private_key_pem, certificate_pem = await self.generate_certificate(certificate_data=certificate_data)
+            key_and_certificate_pem = certificate_pem + b'\n' + private_key_pem
+            return key_and_certificate_pem
         except Exception as e:
             print(e)
             return None

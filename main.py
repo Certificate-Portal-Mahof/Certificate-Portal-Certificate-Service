@@ -7,6 +7,7 @@ from db.db import MongoConnector
 from settings import Settings
 import asyncio
 from routers.certificates_operations.certificate_operations_router import router as certificate_operations_router
+from tools.utils.certificate_operations_utils import CertificateOperationsUtils
 
 settings = Settings()
 
@@ -20,6 +21,8 @@ async def startup() -> None:
     asyncio.get_event_loop().set_debug(settings.is_dev)
 
     MongoConnector().init(mongodb_uri=os.getenv("MONGODB_URI"), db_name=os.getenv("DB_NAME"))
+
+    CertificateOperationsUtils().init()
 
 
 async def shutdown() -> None:

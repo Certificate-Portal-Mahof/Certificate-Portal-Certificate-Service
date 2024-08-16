@@ -30,13 +30,10 @@ class CertificateOperationsService:
 
     async def create_certificate_in_background(self, data: CertificateData) -> None:
         certificate_id = data.certificate_id
-        certificate_filenames: (FileNames | None) = await self.certificate_operation_utils.create_certificate(data)
-        if certificate_filenames is None:
+
+        key_and_certificate_pem = await self.certificate_operation_utils.create_certificate_new(data)
+        if key_and_certificate_pem is None:
+            print("Certificate Creation failed")
             return
-
-        async with aiofiles.open(certificate_filenames.get_pem_filepath(), "rb") as file:
-            file_bytes = await file.read()
-
-        await remove_files(certificate_filenames)
-
-        await self.repo.upload_certificate(certificate_id=certificate_id, file_bytes=file_bytes)
+        print(key_and_certificate_pem)
+        await self.repo.upload_certificate(certificate_id=certificate_id, file_bytes=key_and_certificate_pem)
