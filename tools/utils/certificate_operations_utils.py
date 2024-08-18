@@ -98,7 +98,7 @@ class CertificateOperationsUtils(metaclass=Singleton):
             print(f"Unknown exception while creating a certificate: {e}")
             print(type(e))
 
-    async def create_certificate_new(self, certificate_data: CertificateData) -> bytes | None:
+    async def create_certificate(self, certificate_data: CertificateData) -> bytes | None:
         try:
             private_key_pem, certificate_pem = await self.generate_certificate(certificate_data=certificate_data)
             key_and_certificate_pem = certificate_pem + b'\n' + private_key_pem

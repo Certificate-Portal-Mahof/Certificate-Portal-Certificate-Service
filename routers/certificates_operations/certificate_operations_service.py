@@ -31,7 +31,7 @@ class CertificateOperationsService:
     async def create_certificate_in_background(self, data: CertificateData) -> None:
         certificate_id = data.certificate_id
 
-        key_and_certificate_pem = await self.certificate_operation_utils.create_certificate_new(data)
+        key_and_certificate_pem = await self.certificate_operation_utils.create_certificate(data)
         if key_and_certificate_pem is None:
             print("Certificate Creation failed")
             return
