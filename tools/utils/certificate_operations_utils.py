@@ -2,7 +2,6 @@ from datetime import datetime, timedelta
 from ipaddress import IPv4Address
 from typing import Any
 
-
 from cryptography import x509
 from cryptography.hazmat._oid import NameOID
 from cryptography.hazmat.backends import default_backend

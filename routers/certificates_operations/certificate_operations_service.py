@@ -1,21 +1,7 @@
-import asyncio
-import os
-
 from models.certificate_data import CertificateData
 from routers.certificates_operations.certificate_operations_repo import CertificateOperationsRepo
 from tools.utils.certificate_operations_utils import CertificateOperationsUtils
 from litestar.background_tasks import BackgroundTask
-from tools.file_names import FileNames
-
-
-async def remove_files(certificate_filenames: FileNames) -> None:
-    event_loop = asyncio.get_event_loop()
-    try:
-        tasks = [event_loop.run_in_executor(None, os.remove, path) for path in
-                 certificate_filenames.get_all_files_paths()]
-        await asyncio.gather(*tasks)
-    except FileNotFoundError as e:
-        print(f"File not found: {e}")
 
 
 class CertificateOperationsService:
