@@ -1,10 +1,8 @@
 import asyncio
 import os
 
-import aiofiles
-
-from db.db import MongoConnector
 from models.certificate_data import CertificateData
+from routers.certificates_operations.certificate_operations_repo import CertificateOperationsRepo
 from tools.utils.certificate_operations_utils import CertificateOperationsUtils
 from litestar.background_tasks import BackgroundTask
 from tools.file_names import FileNames
@@ -22,6 +20,7 @@ async def remove_files(certificate_filenames: FileNames) -> None:
 
 class CertificateOperationsService:
     def __init__(self) -> None:
+        self.repo = CertificateOperationsRepo()
         self.certificate_operation_utils = CertificateOperationsUtils()
 
     async def create_certificate(self, data: CertificateData) -> BackgroundTask:
@@ -29,14 +28,10 @@ class CertificateOperationsService:
 
     async def create_certificate_in_background(self, data: CertificateData) -> None:
         certificate_id = data.certificate_id
-        certificate_filenames: (FileNames | None) = await self.certificate_operation_utils.create_certificate(data)
-        if certificate_filenames is None:
+
+        key_and_certificate_pem = await self.certificate_operation_utils.create_certificate(data)
+        if key_and_certificate_pem is None:
+            print("Certificate Creation failed")
             return
-
-        async with aiofiles.open(certificate_filenames.get_pem_filepath(), "rb") as file:
-            file_bytes = await file.read()
-        queue_message = str.encode(data.certificate_id + " ") + file_bytes
-
-        await remove_files(certificate_filenames)
-
-        await MongoConnector().fs.upload_from_stream(filename=certificate_id, source=queue_message)
+        print(key_and_certificate_pem)
+        await self.repo.upload_certificate(certificate_id=certificate_id, file_bytes=key_and_certificate_pem)
