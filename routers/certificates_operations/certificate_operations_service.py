@@ -1,8 +1,6 @@
 import asyncio
 import os
 
-import aiofiles
-
 from models.certificate_data import CertificateData
 from routers.certificates_operations.certificate_operations_repo import CertificateOperationsRepo
 from tools.utils.certificate_operations_utils import CertificateOperationsUtils
