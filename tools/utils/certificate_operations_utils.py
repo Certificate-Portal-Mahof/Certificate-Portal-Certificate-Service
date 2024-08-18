@@ -29,7 +29,7 @@ class CertificateOperationsUtils(metaclass=Singleton):
 
         with open(ROOT_CA_CERTIFICATE_PATH, "rb") as cert_file:
             ca_cert_data = cert_file.read()
-            ca_cert = x509.load_pem_x509_certificate(data=ca_cert_data,backend=self.cryptography_default_backend)
+            ca_cert = x509.load_pem_x509_certificate(data=ca_cert_data, backend=self.cryptography_default_backend)
 
         with open(ROOT_CA_KEY_PATH, "rb") as key_file:
             ca_key_data = key_file.read()
@@ -50,7 +50,7 @@ class CertificateOperationsUtils(metaclass=Singleton):
             private_key = rsa.generate_private_key(
                 public_exponent=65537,
                 key_size=2048,
-                backend=default_backend()
+                backend=self.cryptography_default_backend
             )
 
             subject = x509.Name([
@@ -83,7 +83,7 @@ class CertificateOperationsUtils(metaclass=Singleton):
                 critical=False,
             )
 
-            certificate = certificate_builder.sign(self.ca_key, hashes.SHA256(), default_backend())
+            certificate = certificate_builder.sign(self.ca_key, hashes.SHA256(), self.cryptography_default_backend)
 
             private_key_pem = private_key.private_bytes(
                 encoding=serialization.Encoding.PEM,
