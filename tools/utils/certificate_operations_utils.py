@@ -39,7 +39,8 @@ class CertificateOperationsUtils(metaclass=Singleton):
 
         return ca_cert, ca_key
 
-    def get_expiration_days(self, expiration_date: datetime) -> int:
+    @staticmethod
+    def __get_expiration_days(expiration_date: datetime) -> int:
         certificate_expiration_date: datetime = expiration_date.replace(tzinfo=None)
         current_date = datetime.now()
         expiration_days = (certificate_expiration_date - current_date).days
@@ -63,7 +64,7 @@ class CertificateOperationsUtils(metaclass=Singleton):
                 x509.NameAttribute(NameOID.COMMON_NAME, certificate_data.common_name),
             ])
 
-            expiration_days = self.get_expiration_days(certificate_data.expiration_date)
+            expiration_days = CertificateOperationsUtils.__get_expiration_days(certificate_data.expiration_date)
 
             certificate_builder = x509.CertificateBuilder().subject_name(
                 subject
