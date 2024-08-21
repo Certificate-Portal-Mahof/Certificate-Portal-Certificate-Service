@@ -14,10 +14,9 @@ class CertificateOperationsService:
 
         key_and_certificate_pem = await self.certificate_operation_utils.create_certificate(data)
         if key_and_certificate_pem is None:
-            print("Certificate Creation failed")
+            print("Certificate Creation Failed")
             return
         print(key_and_certificate_pem)
-        await self.repo.upload_certificate(certificate_id=certificate_id, file_bytes=key_and_certificate_pem)
         await self.repo.upload_certificate_file(certificate_id=certificate_id, file_bytes=key_and_certificate_pem)
 
     async def create_certificate(self, data: CertificateDataCertId) -> BackgroundTask:

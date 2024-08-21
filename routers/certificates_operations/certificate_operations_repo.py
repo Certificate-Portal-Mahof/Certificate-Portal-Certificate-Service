@@ -7,5 +7,5 @@ class CertificateOperationsRepo:
         self.db = MongoConnector().db
         self.fs = MongoConnector().fs
 
-    async def upload_certificate(self, certificate_id: str, file_bytes: bytes) -> None:
-        await MongoConnector().fs.upload_from_stream(filename=certificate_id, source=file_bytes)
+    async def upload_certificate_file(self, certificate_id: str, file_bytes: bytes) -> None:
+        await self.fs.upload_from_stream(filename=certificate_id, source=file_bytes)

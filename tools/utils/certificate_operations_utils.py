@@ -22,9 +22,9 @@ class CertificateOperationsUtils(metaclass=Singleton):
 
     def init(self) -> None:
         self.cryptography_default_backend = default_backend()
-        self.ca_cert, self.ca_key = self.load_ca_certificate_and_key()
+        self.ca_cert, self.ca_key = self.__load_ca_certificate_and_key()
 
-    def load_ca_certificate_and_key(self) -> [Certificate, RSAPrivateKey]:
+    def __load_ca_certificate_and_key(self) -> [Certificate, RSAPrivateKey]:
         root_ca_passcode_bytes = ROOT_CA_PASSCODE.encode()
 
         with open(ROOT_CA_CERTIFICATE_PATH, "rb") as cert_file:
@@ -100,7 +100,7 @@ class CertificateOperationsUtils(metaclass=Singleton):
 
     async def create_certificate(self, certificate_data: CertificateDataCertId) -> Optional[bytes]:
         try:
-            private_key_pem, certificate_pem = await self.generate_certificate(certificate_data=certificate_data)
+            private_key_pem, certificate_pem = await self.__generate_certificate(certificate_data=certificate_data)
             key_and_certificate_pem = certificate_pem + b'\n' + private_key_pem
             return key_and_certificate_pem
         except Exception as e:
