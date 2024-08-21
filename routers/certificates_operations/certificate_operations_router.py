@@ -1,8 +1,6 @@
 from litestar import Router, post
 from typing import Annotated
 from litestar.response import Response
-from models.certificate_data import CertificateData
-from routers.certificates_operations.certificate_operations_service import CertificateOperationsService, remove_files
 
 from models.certificate_data import CertificateDataCertId
 
