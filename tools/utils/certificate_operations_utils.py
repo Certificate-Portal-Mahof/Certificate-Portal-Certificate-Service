@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 from ipaddress import IPv4Address
-from typing import Any
+from typing import Any, Optional
 
 from cryptography import x509
 from cryptography.hazmat._oid import NameOID
@@ -10,8 +10,8 @@ from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives.asymmetric.rsa import RSAPrivateKey
 from cryptography.x509 import Certificate
 
-from models.certificate_data import CertificateData
 from config import ROOT_CA_CERTIFICATE_PATH, ROOT_CA_KEY_PATH, ROOT_CA_PASSCODE
+from models.certificate_data import CertificateDataCertId, CertificateMetaData
 from tools.singleton import Singleton
 
 
@@ -45,7 +45,7 @@ class CertificateOperationsUtils(metaclass=Singleton):
         expiration_days = (certificate_expiration_date - current_date).days
         return expiration_days
 
-    async def generate_certificate(self, certificate_data: CertificateData) -> [bytes, bytes]:
+    async def __generate_certificate(self, certificate_data: CertificateDataCertId) -> [bytes, bytes]:
         try:
             private_key = rsa.generate_private_key(
                 public_exponent=65537,
@@ -98,7 +98,7 @@ class CertificateOperationsUtils(metaclass=Singleton):
             print(f"Unknown exception while creating a certificate: {e}")
             print(type(e))
 
-    async def create_certificate(self, certificate_data: CertificateData) -> bytes | None:
+    async def create_certificate(self, certificate_data: CertificateDataCertId) -> Optional[bytes]:
         try:
             private_key_pem, certificate_pem = await self.generate_certificate(certificate_data=certificate_data)
             key_and_certificate_pem = certificate_pem + b'\n' + private_key_pem

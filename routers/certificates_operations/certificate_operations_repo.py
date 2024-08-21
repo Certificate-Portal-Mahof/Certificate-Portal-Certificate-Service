@@ -1,4 +1,5 @@
 from db.db import MongoConnector
+from models.certificate_data import CertificateDataUserId
 
 
 class CertificateOperationsRepo:
