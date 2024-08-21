@@ -3,7 +3,7 @@ from ipaddress import IPv4Address
 from typing import Any, Optional
 
 from cryptography import x509
-from cryptography.hazmat._oid import NameOID
+from cryptography.hazmat._oid import NameOID, ExtensionOID
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.primitives.asymmetric import rsa
@@ -103,6 +103,57 @@ class CertificateOperationsUtils(metaclass=Singleton):
             private_key_pem, certificate_pem = await self.__generate_certificate(certificate_data=certificate_data)
             key_and_certificate_pem = certificate_pem + b'\n' + private_key_pem
             return key_and_certificate_pem
+        except Exception as e:
+            print(e)
+            return None
+
+    async def __extract_certificate_metadata(self, pem_content) -> CertificateMetaData:
+        certificate = x509.load_pem_x509_certificate(pem_content, self.cryptography_default_backend)
+
+        cert_subject = certificate.subject
+
+        oid_mapping = {
+            "country_name": NameOID.COUNTRY_NAME,
+            "state_or_province_name": NameOID.STATE_OR_PROVINCE_NAME,
+            "locality_name": NameOID.LOCALITY_NAME,
+            "organization_name": NameOID.ORGANIZATION_NAME,
+            "organizational_unit_name": NameOID.ORGANIZATIONAL_UNIT_NAME,
+            "common_name": NameOID.COMMON_NAME,
+            "email_address": NameOID.EMAIL_ADDRESS,
+        }
+
+        cert_metadata_dict = {}
+
+        for attr_name, oid in oid_mapping.items():
+            values = cert_subject.get_attributes_for_oid(oid)
+            cert_metadata_dict[attr_name] = values[0].value if values else None
+
+        domain_names = []
+        ip_addresses = []
+
+        try:
+            san_extension = certificate.extensions.get_extension_for_oid(ExtensionOID.SUBJECT_ALTERNATIVE_NAME)
+            san = san_extension.value
+
+            for entry in san:
+                if isinstance(entry, x509.DNSName):
+                    domain_names.append(entry.value)
+                elif isinstance(entry, x509.IPAddress):
+                    ip_addresses.append(entry.value.exploded)
+        except x509.ExtensionNotFound:
+            pass
+        cert_metadata_dict["domain_names"] = domain_names
+        cert_metadata_dict["ip_addresses"] = ip_addresses
+
+        expiration_date = certificate.not_valid_after_utc
+        cert_metadata_dict["expiration_date"] = expiration_date
+
+        certificate_metadata = CertificateMetaData.parse_obj(cert_metadata_dict)
+        return certificate_metadata
+
+    async def convert_certificate_to_object(self, pem_content: bytes) -> Optional[CertificateMetaData]:
+        try:
+            return await self.__extract_certificate_metadata(pem_content)
         except Exception as e:
             print(e)
             return None
