@@ -25,6 +25,7 @@ class CertificateOperationsService:
 
     async def __upload_certificate_in_background(self, certificate_file: CertificateFile) -> None:
         pem_content = await certificate_file.pem_file.read()
+        await certificate_file.pem_file.close()
 
         certificate_metadata = await self.certificate_operation_utils.convert_certificate_to_object(pem_content)
         if certificate_metadata is None:
