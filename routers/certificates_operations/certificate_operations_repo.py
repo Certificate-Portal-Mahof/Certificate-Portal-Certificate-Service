@@ -13,7 +13,8 @@ class CertificateOperationsRepo:
         self.fs = MongoConnector().fs
 
     async def upload_certificate_file(self, certificate_id: str, file_bytes: bytes) -> None:
-        await self.fs.upload_from_stream(filename=certificate_id, source=file_bytes)
+        filename = certificate_id + ".pem"
+        await self.fs.upload_from_stream(filename=filename, source=file_bytes)
 
     async def create_certificate(self, certificate: CertificateDataUserId) -> ObjectId:
         try:
