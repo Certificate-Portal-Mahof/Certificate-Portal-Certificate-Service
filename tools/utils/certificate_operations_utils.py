@@ -45,7 +45,7 @@ class CertificateOperationsUtils(metaclass=Singleton):
         expiration_days = (certificate_expiration_date - current_date).days
         return expiration_days
 
-    async def __generate_certificate(self, certificate_data: CertificateDataCertId) -> [bytes, bytes]:
+    async def __generate_certificate(self, certificate_data: CertificateDataCertId) -> Optional[bytes, bytes]:
         try:
             private_key = rsa.generate_private_key(
                 public_exponent=65537,
@@ -98,9 +98,13 @@ class CertificateOperationsUtils(metaclass=Singleton):
             print(f"Unknown exception while creating a certificate: {e}")
             print(type(e))
 
+            return None, None
+
     async def create_certificate(self, certificate_data: CertificateDataCertId) -> Optional[bytes]:
         try:
             private_key_pem, certificate_pem = await self.__generate_certificate(certificate_data=certificate_data)
+            if private_key_pem is None or certificate_pem is None:
+                return None
             key_and_certificate_pem = certificate_pem + b'\n' + private_key_pem
             return key_and_certificate_pem
         except Exception as e:
