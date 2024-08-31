@@ -45,7 +45,8 @@ class CertificateOperationsUtils(metaclass=Singleton):
         expiration_days = (certificate_expiration_date - current_date).days
         return expiration_days
 
-    async def __generate_certificate(self, certificate_data: CertificateDataCertId) -> Optional[bytes, bytes]:
+    async def __generate_certificate(self, certificate_data: CertificateDataCertId) -> tuple[
+                                     Optional[bytes], Optional[bytes]]:
         try:
             private_key = rsa.generate_private_key(
                 public_exponent=65537,
@@ -111,8 +112,13 @@ class CertificateOperationsUtils(metaclass=Singleton):
             print(e)
             return None
 
+    @staticmethod
+    def __check_if_private_key_present(pem_content):
+        serialization.load_pem_private_key(data=pem_content, password=None)
+
     async def __extract_certificate_metadata(self, pem_content) -> CertificateMetaData:
-        certificate = x509.load_pem_x509_certificate(pem_content, self.cryptography_default_backend)
+        self.__check_if_private_key_present(pem_content)
+        certificate = x509.load_pem_x509_certificate(data=pem_content, backend=self.cryptography_default_backend)
 
         cert_subject = certificate.subject
 
