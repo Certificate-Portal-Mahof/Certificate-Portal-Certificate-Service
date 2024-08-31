@@ -37,7 +37,7 @@ class CertificateOperationsService:
         certificate_data = CertificateDataUserId(user_id=user_id, cert_name=cert_name,
                                                  **(certificate_metadata.model_dump()))
 
-        certificate_object_id = await self.repo.create_certificate(certificate_data)
+        certificate_object_id = await self.repo.create_certificate_document(certificate_data)
         certificate_id = str(certificate_object_id)
         await self.repo.upload_certificate_file(certificate_id=certificate_id, file_bytes=pem_content)
 

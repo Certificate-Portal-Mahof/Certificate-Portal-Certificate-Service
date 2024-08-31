@@ -16,7 +16,7 @@ class CertificateOperationsRepo:
         filename = certificate_id + ".pem"
         await self.fs.upload_from_stream(filename=filename, source=file_bytes)
 
-    async def create_certificate(self, certificate: CertificateDataUserId) -> ObjectId:
+    async def create_certificate_document(self, certificate: CertificateDataUserId) -> ObjectId:
         try:
             new_certificate_details = await self.db["certificates"].insert_one(certificate.model_dump())
             return new_certificate_details.inserted_id
