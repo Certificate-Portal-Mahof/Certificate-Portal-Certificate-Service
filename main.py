@@ -4,12 +4,10 @@ from litestar import Litestar, get
 import uvicorn
 
 from db.db import MongoConnector
-from settings import Settings
+from settings import settings
 import asyncio
 from routers.certificates_operations.certificate_operations_router import router as certificate_operations_router
 from tools.utils.certificate_operations_utils import CertificateOperationsUtils
-
-settings = Settings()
 
 
 @get("/")

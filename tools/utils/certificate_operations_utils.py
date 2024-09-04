@@ -10,7 +10,7 @@ from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives.asymmetric.rsa import RSAPrivateKey
 from cryptography.x509 import Certificate
 
-from config import ROOT_CA_CERTIFICATE_PATH, ROOT_CA_KEY_PATH, ROOT_CA_PASSCODE
+from settings import settings
 from models.certificate_data import CertificateDataCertId, CertificateMetaData
 from tools.singleton import Singleton
 
@@ -25,13 +25,13 @@ class CertificateOperationsUtils(metaclass=Singleton):
         self.ca_cert, self.ca_key = self.__load_ca_certificate_and_key()
 
     def __load_ca_certificate_and_key(self) -> [Certificate, RSAPrivateKey]:
-        root_ca_passcode_bytes = ROOT_CA_PASSCODE.encode()
+        root_ca_passcode_bytes = settings.root_ca_passcode.encode()
 
-        with open(ROOT_CA_CERTIFICATE_PATH, "rb") as cert_file:
+        with open(settings.root_ca_certificate_path, "rb") as cert_file:
             ca_cert_data = cert_file.read()
             ca_cert = x509.load_pem_x509_certificate(data=ca_cert_data, backend=self.cryptography_default_backend)
 
-        with open(ROOT_CA_KEY_PATH, "rb") as key_file:
+        with open(settings.root_ca_key_path, "rb") as key_file:
             ca_key_data = key_file.read()
             ca_key = serialization.load_pem_private_key(ca_key_data, root_ca_passcode_bytes,
                                                         self.cryptography_default_backend)
