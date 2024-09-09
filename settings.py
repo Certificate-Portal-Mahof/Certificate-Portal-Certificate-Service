@@ -16,8 +16,9 @@ class Settings(BaseSettings):
     allow_credentials: bool = True
     allow_headers: List[str] = ["*"]
 
-    root_ca_certificate_path = "./root_ca_files/RootCA.crt"
-    root_ca_key_path = "./root_ca_files/RootCA.key"
-    root_ca_passcode = os.getenv("ROOT_CA_PASSCODE")
+    root_ca_certificate_path: str = "./root_ca_files/RootCA.crt"
+    root_ca_key_path: str = "./root_ca_files/RootCA.key"
+    root_ca_passcode: str = os.getenv("ROOT_CA_PASSCODE")
+
 
 settings = Settings()
